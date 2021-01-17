@@ -30,5 +30,4 @@ MyIP returns your IP, your system's IP, and the IP of its gateway.
 
 http://labs.geody.com/iptools/
 
-Screenshot:
 <img src="https://raw.githubusercontent.com/ElfQrin/iptools/main/ipcheck_screenshot.png" alt="GeodyLabs IPTools IPcheck tool bash shell script Linux screenshot" />
