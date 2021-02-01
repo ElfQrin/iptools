@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # IPban
-xver='r2021-01-16 fr2020-09-12';
+xver='r2021-02-01 fr2020-09-12';
 # by Valerio Capello - http://labs.geody.com/ - License: GPL v3.0
 
 
@@ -115,6 +115,7 @@ echo "--f2bstart      # Start Fail2Ban";
 echo "--f2brestart    # Restart Fail2Ban";
 echo "--f2bflush      # Stop, Flush Fail2Ban";
 echo "--f2bflushnrestart # Stop, Flush, Start Fail2Ban";
+echo "--f2blist       # List all Fail2Ban Jails";
 echo "--f2bstatus     # Display status for all Fail2Ban Jails";
 echo;
 fi
@@ -300,6 +301,27 @@ fi
 
 if ( $f2benable ); then
 
+f2blist() {
+echo "fail2ban list jails"; echo;
+# fail2ban-client --version ; echo;
+jails=$(fail2ban-client status | grep "Jail list" | sed -E 's/^[^:]+:[ \t]+//' | sed 's/,//g')
+jailsnum=0;
+for jail in $jails
+do
+jailsnum=$((jailsnum+1));
+jailstatus=$(fail2ban-client status $jail)
+filelist=$( echo -n "$jailstatus" | grep -m 1 'File list:' | awk {'print $5'} );
+echo "$jail for $filelist";
+done
+if [ $jailsnum -eq 1 ]; then
+echo "$jailsnum Fail2Ban Jail found.";
+elif [ $jailsnum -gt 1 ]; then
+echo "$jailsnum Fail2Ban Jails found.";
+else
+echo "No Fail2Ban Jails found.";
+fi
+}
+
 f2bstatus() {
 echo "fail2ban-client status --all"; echo;
 fail2ban-client --version
@@ -319,6 +341,16 @@ echo "$jailsnum Fail2Ban Jails found.";
 else
 echo "No Fail2Ban Jails found.";
 fi
+}
+
+f2bdatasize() {
+# f2bdbsize=$( du -bs '/var/lib/fail2ban/' | awk '{print $1}' | tr -d '\n' );
+f2bdbsize=$( du -bsc /var/lib/fail2ban/* | head --lines=1 | awk '{print $1}' | tr -d '\n' );
+f2blgsize=$( du -bsc /var/log/fail2ban.* | head --lines=1 | awk '{print $1}' | tr -d '\n' );
+f2btotsize=( $f2bdbsize + $f2blgsize );
+echo "Fail2Ban Database size is $f2bdbsize bytes.";
+echo "Fail2Ban Logs size is $f2blgsize bytes.";
+echo "Fail2Ban total data size is $f2btotsize bytes.";
 }
 
 f2bstop() {
@@ -590,8 +622,14 @@ elif [[ "${action:0:5}" == "--f2b" ]]; then
 if ( ! $f2benable ); then echo "Fail2Ban is disabled in IPban configuration."; exit 1; fi
 if [ -z "$istheref2b" ]; then echo "Fail2Ban is not present."; exit 1; fi
 case $action in
+"--f2blist")
+f2blist;
+exit 0;
+;;
 "--f2bstatus")
 f2bstatus;
+echo;
+f2bdatasize;
 exit 0;
 ;;
 "--f2bstop")

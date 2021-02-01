@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # IPcheck
-xver='r2021-01-16 fr2020-09-12';
+xver='r2021-02-01 fr2020-09-12';
 # by Valerio Capello - http://labs.geody.com/ - License: GPL v3.0
 
 
@@ -32,11 +32,11 @@ shwloggeduserslast=false; # Show last logged users
 lastuserssince='yesterday'; # Consider last logged users since the specified time
 ipinlogscurrent=true; # Show occurrences of the IP in all current logs
 ipinlogsold=true; # Show occurrences of the IP in all old logs
-logdir='/var/log/apache2/'; # Apache Logs Directory (only required to search the JP into all current and old logs)
+logdir='/var/log/apache2/'; # Apache Logs Directory (only required to search the IP into all current and old logs)
 logscurrentext='.log'; # Extension for current logs
 logsoldext='.log.1'; # Extension for old logs
 enipwatchlist=true; # Show occurrences of the IP in the watchlist
-minoccenipwatchlist=0; # Minimum occurrences for an IP in the watchlist to report
+minoccenipwatchlist=1; # Minimum occurrences for an IP in the watchlist to report
 ipwatchlist=(); # IP watchlist. Example: ipwatchlist=('192.0.2.1' '192.0.2.100' '192.0.2.101');
 
 f2benable=true; # Enable Fail2Ban checks (Seek IP in Fail2Ban banned IP lists)
@@ -389,7 +389,7 @@ echo "This IP is this machine's default gateway."; echo;
 fi
 }
 
-fail2banlist() {
+f2blist() {
 echo "Fail2Ban:"
 
 local iptcmd='iptables'; local ipttxt='IPTables';
@@ -677,7 +677,7 @@ exit 0;
 '--f2blist')
 apphdr; echo
 if ( ! $f2benable ); then echo "Fail2Ban is disabled in IPcheck configuration."; exit 1; fi
-fail2banlist;
+f2blist;
 exit 0;
 ;;
 '--f2bstatus'|'--f2bstatusall')
@@ -702,6 +702,14 @@ echo "$jailsnum Fail2Ban Jails found.";
 else
 echo "No Fail2Ban Jails found.";
 fi
+echo
+# f2bdbsize=$( du -bs '/var/lib/fail2ban/' | awk '{print $1}' | tr -d '\n' );
+f2bdbsize=$( du -bsc /var/lib/fail2ban/* | tail --lines=1 | awk '{print $1}' | tr -d '\n' );
+f2blgsize=$( du -bsc /var/log/fail2ban.* | tail --lines=1 | awk '{print $1}' | tr -d '\n' );
+f2btotsize=( $f2bdbsize + $f2blgsize );
+echo "Fail2Ban Database size is $f2bdbsize bytes.";
+echo "Fail2Ban Logs size is $f2blgsize bytes.";
+echo "Fail2Ban total data size is $f2btotsize bytes.";
 exit 1;
 else
 echo "Fail2Ban is not present.";
@@ -1150,7 +1158,7 @@ echo "No INPUT rules found in $ipttxt.";
 fi
 
 if ( $f2benable ); then
-echo; fail2banlist;
+echo; f2blist;
 fi
 
 if ( $ufwenable ); then
