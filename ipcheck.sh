@@ -921,7 +921,7 @@ echo "IP in current Apache Logs:"
 ipinallogs="$( grep -r -l $ipx $logdir*$logscurrentext )";
 if [ ${#ipinallogs} -gt 0 ]; then
 # echo $ipinallogs # File names in a single line
-echo "$ipinallogs" # File names in a multiple lines
+echo "$ipinallogs" # File names in multiple lines
 else
 echo 'Not Found.';
 fi
@@ -931,7 +931,7 @@ echo "IP in old Apache Logs:"
 ipinallogs="$( grep -r -l $ipx $logdir*$logsoldext )";
 if [ ${#ipinallogs} -gt 0 ]; then
 # echo $ipinallogs # File names in a single line
-echo "$ipinallogs" # File names in a multiple lines
+echo "$ipinallogs" # File names in multiple lines
 else
 echo 'Not Found.';
 fi

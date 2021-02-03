@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # IPban
-xver='r2021-02-01 fr2020-09-12';
+xver='r2021-02-03 fr2020-09-12';
 # by Valerio Capello - http://labs.geody.com/ - License: GPL v3.0
 
 
@@ -26,7 +26,7 @@ enipwarnlist=true; # Warn about IPs in the Warnlist
 ipwarnlist=(); # IP Warnlist. Example: ipwarnlist=('192.0.2.1' '192.0.2.254');
 enipallowlist=true; # Protect IPs in the Allowlist (whitelist)
 ipallowlist=(); # IP Allowlist (whitelist). Example: ipallowlist=('192.0.2.100' '192.0.2.101');
-enipblocklist=false; # Protect IPs in the Blocklist (blacklist)
+enipblocklist=false; # Keep blocked IPs in the Blocklist (blacklist)
 ipblocklist=(); # IP Blocklist (blacklist). Example: ipblocklist=('192.0.2.200' '192.0.2.201');
 
 f2benable=true; # Enable all Fail2Ban actions and commands (requires Fail2Ban to be present)
@@ -567,6 +567,9 @@ else
 isufwenabled=false;
 fi
 
+msgtrigipbpr="TRIGGERING IP BAN PROTECTION.";
+msgtrigipblk="TRIGGERING IP BLOCK.";
+
 apphdr; echo;
 
 if [ $# -eq 1 ]; then
@@ -939,7 +942,7 @@ ipocc=$( grep $ipx $filei | grep -v '^#' | wc -l );
 if [ $ipocc -gt 0 ]; then
 echo $( grep $ipx $filei | grep -v '^#' );
 # if ( $enfileprotectlist ) && ( $acheckban ); then
-echo "TRIGGERING IP BAN PROTECTION.";
+echo "$msgtrigipbpr";
 isipprot=$((isipprot+1));
 # fi
 if [ $ipocc -eq 1 ]; then
@@ -980,7 +983,7 @@ ipocc=$( grep $ipx $filei | grep -v '^#' | wc -l );
 if [ $ipocc -gt 0 ]; then
 echo $( grep $ipx $filei | grep -v '^#' );
 # if ( $enfileblocklist ) && ( $acheckban ); then
-echo "TRIGGERING IP BLOCK.";
+echo "$msgtrigipblk";
 isipblock=$((isipblock+1));
 # fi
 if [ $ipocc -eq 1 ]; then
@@ -1020,7 +1023,7 @@ else
 echo "$ipocc occurrences ($ipocctot total) of the IP found in currently logged users.";
 fi
 if [ $watchloggedusersnow -eq 2 ] && ( $acheckban ); then
-echo "TRIGGERING IP BAN PROTECTION.";
+echo "$msgtrigipbpr";
 isipprot=$((isipprot+1));
 fi
 else
@@ -1041,7 +1044,7 @@ else
 echo "$ipocc occurrences ($ipocctot total) of the IP found in last logged users (since $lastuserssince).";
 fi
 if [ $watchloggeduserslast -eq 2 ] && ( $acheckban ); then
-echo "TRIGGERING IP BAN PROTECTION.";
+echo "$msgtrigipbpr";
 isipprot=$((isipprot+1));
 fi
 else
@@ -1070,7 +1073,7 @@ if [ ${#ipallowlist[@]} -gt 0 ]; then
 if [[ " ${ipallowlist[*]} " == *" ${ipx} "* ]]; then
 echo "The IP was FOUND in the IP Allowlist.";
 # if ( $enipallowlist ); then
-echo "TRIGGERING IP BAN PROTECTION.";
+echo "$msgtrigipbpr";
 isipprot=$((isipprot+1));
 # fi
 else
@@ -1087,7 +1090,7 @@ if [ ${#ipblocklist[@]} -gt 0 ]; then
 if [[ " ${ipblocklist[*]} " == *" ${ipx} "* ]]; then
 echo "The IP was FOUND in the IP Blocklist.";
 # if ( $enipblocklist ) && ( $acheckunban ); then
-echo "TRIGGERING IP BLOCK.";
+echo "$msgtrigipblk";
 isipblock=$((isipblock+1));
 # fi
 else
@@ -1102,28 +1105,28 @@ if [[ "$ipx" == "$( echo -n $SSH_CLIENT | awk '{print $1}' | tr -d '\n' )" ]]; t
 if [ $watchcurrentuser -eq 1 ]; then echo -n 'Warning: '; fi
 if [ $watchcurrentuser -ge 1 ]; then echo 'This IP is YOUR IP.'; fi
 if [ $watchcurrentuser -eq 2 ] && ( $acheckban ); then
-echo "TRIGGERING IP BAN PROTECTION.";
+echo "$msgtrigipbpr";
 isipprot=$((isipprot+1));
 fi
 elif [[ "$ipx" == "$( hostname -i | tr -d '\n' )" ]]; then
 if [ $watchmachine -eq 1 ]; then echo -n 'Warning: '; fi
 if [ $watchmachine -ge 1 ]; then echo "This IP is this machine's local IP."; fi
 if [ $watchmachine -eq 2 ] && ( $acheckban ); then
-echo "TRIGGERING IP BAN PROTECTION.";
+echo "$msgtrigipbpr";
 isipprot=$((isipprot+1));
 fi
 elif [[ "$ipx" == "$( ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p' | tr -d '\n' )" ]]; then
 if [ $watchmachine -eq 1 ]; then echo -n 'Warning: '; fi
 if [ $watchmachine -ge 1 ]; then echo "This IP is this machine's global IP."; fi
 if [ $watchmachine -eq 2 ] && ( $acheckban ); then
-echo "TRIGGERING IP BAN PROTECTION.";
+echo "$msgtrigipbpr";
 isipprot=$((isipprot+1));
 fi
 elif [[ "$ipx" == "$( route -n | grep 'UG[ \t]' | awk '{print $2}' | tr -d '\n' )" ]]; then
 if [ $watchmachine -eq 1 ]; then echo -n 'Warning: '; fi
 if [ $watchmachine -ge 1 ]; then echo "This IP is this machine's default gateway."; fi
 if [ $watchmachine -eq 2 ] && ( $acheckban ); then
-echo "TRIGGERING IP BAN PROTECTION.";
+echo "$msgtrigipbpr";
 isipprot=$((isipprot+1));
 fi
 fi
