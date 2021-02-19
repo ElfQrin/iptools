@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # IPban
-xver='r2021-02-03 fr2020-09-12';
+xver='r2021-02-19 fr2020-09-12';
 # by Valerio Capello - http://labs.geody.com/ - License: GPL v3.0
 
 
@@ -553,7 +553,7 @@ if ( ! $ufwenable ); then acheckufw=false; fi
 # Main
 
 istheref2b=$( type -t fail2ban-client );
-if [ $( iptables -L f2b-sshd -n | head --lines=3 | wc -l ) -eq 3 ]; then
+if [ $( fail2ban-client status | wc -l ) -ge 3 ]; then
 isf2bon=true;
 else
 isf2bon=false;

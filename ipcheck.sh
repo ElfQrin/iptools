@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # IPcheck
-xver='r2021-02-01 fr2020-09-12';
+xver='r2021-02-19 fr2020-09-12';
 # by Valerio Capello - http://labs.geody.com/ - License: GPL v3.0
 
 
@@ -770,7 +770,7 @@ fi
 echo;
 fi
 
-if [ $( iptables -L f2b-sshd -n | head --lines=3 | wc -l ) -eq 3 ]; then
+if [ $( fail2ban-client status | wc -l ) -ge 3 ]; then
 isf2bon=true;
 else
 isf2bon=false;
