@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # IPcheck
-xver='r2021-02-19 fr2020-09-12';
+xver='r2021-04-15 fr2020-09-12';
 # by Valerio Capello - http://labs.geody.com/ - License: GPL v3.0
 
 
@@ -798,7 +798,7 @@ host $ipx
 if [ $whoisip -ge 1 ]; then
 echo; echo "Who is:"
 case $whoisip in
-1) whois $ipx | grep -iE "^netrange:|^cidr:|^inetnum:|^route:|^netname:|^orgname:|^organisation:|^org-name:|^custname:|^owner:|^country:|^orgabuseemail:|^e-mail:|^descr:|^remarks:" ;;
+1) whois $ipx | grep -iE "^\s*netrange:|^\s*netblock:|^\s*cidr:|^\s*inetnum:|^\s*route:|^\s*\s*netname:|^\s*orgname:|^\s*organisation:|^\s*organization:|^\s*org-name:|^\s*custname:|^\s*owner:|^\s*country:|^\s*orgabuseemail:|^\s*e-mail:|^\s*descr:|^\s*remarks:" ;;
 2) whois $ipx ;;
 esac
 fi
