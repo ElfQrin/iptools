@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # IPcheck
-xver='r2021-07-19 fr2020-09-12';
+xver='r2021-07-20 fr2020-09-12';
 # by Valerio Capello - http://labs.geody.com/ - License: GPL v3.0
 
 
@@ -36,7 +36,7 @@ ipinlogsold=true; # Show occurrences of the IP in all old logs
 logdir='/var/log/apache2/'; # Apache Logs Directory (only required to search the IP into all current and old logs)
 logscurrentext='.log'; # Extension for current logs
 logsoldext='.log.1'; # Extension for old logs
-enipwatchlist=true; # Show occurrences of the IP in the watchlist
+enipwatchlist=false; # Show occurrences of the IP in the watchlist
 minoccenipwatchlist=1; # Minimum occurrences for an IP in the watchlist to report
 ipwatchlist=(); # IP watchlist. Example: ipwatchlist=('192.0.2.1' '192.0.2.100' '192.0.2.101');
 subnetcheck=true; # Count and List occurrences of IPs in the subnets of the IP into the given log (if this is set to False, no subnets will be checked even if enabled)
@@ -401,6 +401,135 @@ echo "This IP is this machine's default gateway."; echo;
 fi
 }
 
+# Requires f2blist, ufwstatus
+sysstats() {
+iptcmd="iptables${iptfwx}"; ipttxt='IPTables';
+echo "$ipttxt:"
+ipttotrulinp=$( $iptcmd -L INPUT -n | wc -l ); ipttotrulinp=$((ipttotrulinp-2));
+if [ $ipttotrulinp -gt 0 ]; then
+if [ $ipttotrulinp -eq 1 ]; then
+echo "$ipttotrulinp INPUT rule found in $ipttxt.";
+else
+echo "$ipttotrulinp INPUT rules found in $ipttxt.";
+fi
+else
+echo "No INPUT rules found in $ipttxt.";
+fi
+
+iptcmd="ip6tables${iptfwx}"; ipttxt='IP6Tables';
+echo "$ipttxt:"
+ipttotrulinp=$( $iptcmd -L INPUT -n | wc -l ); ipttotrulinp=$((ipttotrulinp-2));
+if [ $ipttotrulinp -gt 0 ]; then
+if [ $ipttotrulinp -eq 1 ]; then
+echo "$ipttotrulinp INPUT rule found in $ipttxt.";
+else
+echo "$ipttotrulinp INPUT rules found in $ipttxt.";
+fi
+else
+echo "No INPUT rules found in $ipttxt.";
+fi
+
+if ( $f2benable ); then
+echo; f2blist;
+fi
+
+if ( $ufwenable ); then
+echo; ufwstatus;
+fi
+
+if ( $shwloggedusersnow ) || ( $shwloggeduserslast ); then
+
+echo; echo "Logged Users:"
+
+if ( $shwloggedusersnow ); then
+echo "Currently logged users:"
+who -s --ips
+fi
+
+if ( $shwloggeduserslast ) && [ -n "$lastuserssince" ]; then
+echo "Last logged users (since $lastuserssince):"
+last -i --since yesterday | head --lines=-2
+fi
+
+fi
+
+if ( $enfileprintlist ); then
+
+echo; echo "Showing content of Files in Printlist:"
+
+if [ ${#fileprintlist[@]} -gt 0 ]; then
+
+for filei in "${fileprintlist[@]}"
+do
+if [ -n "$filei" ]; then
+# fileish="$( basename $filei )";
+echo "Showing $filei:"
+filex=$(isfile "$filei")
+case $filex in
+1)
+cat "$filei"; # | more ;
+echo;
+;;
+2) echo "$filei is a directory, not a file." ;;
+*) echo "$filei not found." ;;
+esac
+fi
+done
+else
+echo "The File Printlist is empty."
+fi
+
+fi
+
+if ( $enipwatchlist ); then
+echo; echo "IPs in Watchlist:"
+if [ ${#ipwatchlist[@]} -gt 0 ]; then
+for ipel in "${ipwatchlist[@]}"; do
+ipocc=$( grep $ipel $logfx | wc -l );
+if [ $ipocc -ge $minoccenipwatchlist ]; then
+if [ $ipocc -eq 1 ]; then
+echo "IP $ipel : $ipocc occurrence found in the Apache Log File.";
+else
+echo "IP $ipel : $ipocc occurrences found in the Apache Log File.";
+fi
+fi
+done
+else
+echo "The Watchlist is empty."
+fi
+fi
+
+if [ -n "$istherenetstat" ]; then
+echo; echo "Top IPs accessing the system now:"
+conntot=$( netstat -an | wc -l )
+if [ $conntot -gt 0 ]; then
+connest=$( netstat -an | grep 'ESTABLISHED' | wc -l )
+netstat -an | grep 'ESTABLISHED' | awk '{print $5}' | grep -o "[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}" | egrep -v "(`for i in \`ip addr | grep inet | grep eth0 | cut -d/ -f1 | awk '{print $2}'\`;do echo -n "$i|"| sed 's/\./\\\./g;';done`127\.|0\.0\.0)" | sort -n | uniq -c | sort -rn | head --lines=$nrestop # | nl -n rn -s '. '
+if [ $connest -gt 1 ]; then echo "$connest established connections."; else echo "$connest established connection."; fi
+if [ $conntot -gt 1 ]; then echo "$conntot total connections."; else echo "$conntot total connection."; fi
+else
+echo "No active connections.";
+fi
+fi
+}
+
+# $1=true|false; # Show Memory Usage in Human Readable Format
+shwmem() {
+if ( $1 ); then
+free -h | xargs | awk '{print "Memory: Size: "$8" Used: "$9" Free: "$10" Avail: "$13}';
+swapon --show --noheadings --raw | xargs | awk '{print "Swap File: Dev: "$1" Total: "$3" Used: "$4}';
+else
+free;
+fi
+}
+
+# Requires shwmem
+sysinfo() {
+shwmem true;
+df / -Th | xargs | awk '{print "Disk FS: "$9" Type: "$10" Size: "$11" Used: "$12" ("$14") Avail: "$13" ("(100-$14)"%)"}';
+echo -n "CPU average load (Cores: "; grep -c 'processor' /proc/cpuinfo  | tr -d '\n'; echo -n "): "; uptime | awk -F'[a-z]:' '{print $2}' | xargs | awk '{print "1 m: "$1" 5 m: "$2" 15 m: "$3}';
+}
+
 f2blist() {
 echo "Fail2Ban:"
 
@@ -736,7 +865,13 @@ exit 0;
 ;;
 esac
 
-if [ $# -eq 1 ]; then
+if [ $# -eq 0 ]; then
+apphdr; echo
+sysinfo;
+echo;
+sysstats;
+exit 1;
+elif [ $# -eq 1 ]; then
 ipv=$(isip "$1")
 if [ $ipv -eq 4 ] || [ $ipv -eq 5 ] || [ $ipv -eq 6 ]; then
 logf=""; # Apache Log File
@@ -1203,116 +1338,8 @@ fi
 
 if [ -n "$logfx" ] && ( [ -z "$ipx" ] || $shwlogstats ); then
 
-iptcmd="iptables${iptfwx}"; ipttxt='IPTables';
-echo "$ipttxt:"
-ipttotrulinp=$( $iptcmd -L INPUT -n | wc -l ); ipttotrulinp=$((ipttotrulinp-2));
-if [ $ipttotrulinp -gt 0 ]; then
-if [ $ipttotrulinp -eq 1 ]; then
-echo "$ipttotrulinp INPUT rule found in $ipttxt.";
-else
-echo "$ipttotrulinp INPUT rules found in $ipttxt.";
-fi
-else
-echo "No INPUT rules found in $ipttxt.";
-fi
-
-iptcmd="ip6tables${iptfwx}"; ipttxt='IP6Tables';
-echo "$ipttxt:"
-ipttotrulinp=$( $iptcmd -L INPUT -n | wc -l ); ipttotrulinp=$((ipttotrulinp-2));
-if [ $ipttotrulinp -gt 0 ]; then
-if [ $ipttotrulinp -eq 1 ]; then
-echo "$ipttotrulinp INPUT rule found in $ipttxt.";
-else
-echo "$ipttotrulinp INPUT rules found in $ipttxt.";
-fi
-else
-echo "No INPUT rules found in $ipttxt.";
-fi
-
-if ( $f2benable ); then
-echo; f2blist;
-fi
-
-if ( $ufwenable ); then
-echo; ufwstatus;
-fi
-
-if ( $shwloggedusersnow ) || ( $shwloggeduserslast ); then
-
-echo; echo "Logged Users:"
-
-if ( $shwloggedusersnow ); then
-echo "Currently logged users:"
-who -s --ips
-fi
-
-if ( $shwloggeduserslast ) && [ -n "$lastuserssince" ]; then
-echo "Last logged users (since $lastuserssince):"
-last -i --since yesterday | head --lines=-2
-fi
-
-fi
-
-if ( $enfileprintlist ); then
-
-echo; echo "Showing content of Files in Printlist:"
-
-if [ ${#fileprintlist[@]} -gt 0 ]; then
-
-for filei in "${fileprintlist[@]}"
-do
-if [ -n "$filei" ]; then
-# fileish="$( basename $filei )";
-echo "Showing $filei:"
-filex=$(isfile "$filei")
-case $filex in
-1)
-cat "$filei"; # | more ;
+sysstats;
 echo;
-;;
-2) echo "$filei is a directory, not a file." ;;
-*) echo "$filei not found." ;;
-esac
-fi
-done
-else
-echo "The File Printlist is empty."
-fi
-
-fi
-
-if ( $enipwatchlist ); then
-echo; echo "IPs in Watchlist:"
-if [ ${#ipwatchlist[@]} -gt 0 ]; then
-for ipel in "${ipwatchlist[@]}"; do
-ipocc=$( grep $ipel $logfx | wc -l );
-if [ $ipocc -ge $minoccenipwatchlist ]; then
-if [ $ipocc -eq 1 ]; then
-echo "IP $ipel : $ipocc occurrence found in the Apache Log File.";
-else
-echo "IP $ipel : $ipocc occurrences found in the Apache Log File.";
-fi
-fi
-done
-else
-echo "The Watchlist is empty."
-fi
-fi
-
-if [ -n "$istherenetstat" ]; then
-echo; echo "Top IPs accessing the system now:"
-conntot=$( netstat -an | wc -l )
-if [ $conntot -gt 0 ]; then
-connest=$( netstat -an | grep 'ESTABLISHED' | wc -l )
-netstat -an | grep 'ESTABLISHED' | awk '{print $5}' | grep -o "[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}" | egrep -v "(`for i in \`ip addr | grep inet | grep eth0 | cut -d/ -f1 | awk '{print $2}'\`;do echo -n "$i|"| sed 's/\./\\\./g;';done`127\.|0\.0\.0)" | sort -n | uniq -c | sort -rn | head --lines=$nrestop # | nl -n rn -s '. '
-if [ $connest -gt 1 ]; then echo "$connest established connections."; else echo "$connest established connection."; fi
-if [ $conntot -gt 1 ]; then echo "$conntot total connections."; else echo "$conntot total connection."; fi
-else
-echo "No active connections.";
-fi
-fi
-
-echo
 
 if [[ -d $logfx ]]; then
 echo "Apache Log File not found (specified file name is a directory)"
