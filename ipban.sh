@@ -1,12 +1,13 @@
 #!/bin/bash
 
 # IPban
-xver='r2021-02-19 fr2020-09-12';
+xver='r2021-07-19 fr2020-09-12';
 # by Valerio Capello - http://labs.geody.com/ - License: GPL v3.0
 
 
 # Config
 
+iptfw=1; # IP Tables framework: 0: Standard, 1: nft (nftables, default and recommended since Debian Buster)
 ipundott2dott=true; # If an undotted IP is passed, convert it to a dotted IP before to process it
 allwarns=false; # Issue all warnings and messages, regardless of the requested ban/unban action
 watchmachine=2; # Watch the IPs of the machine and its gateway: 0: No, 1: Warn, 2: Protect (recommended: 2)
@@ -51,6 +52,13 @@ echo "by Valerio Capello - labs.geody.com - License: GPL v3.0";
 # Requires apphdr
 apphelp() {
 apphdr; echo;
+echo -n 'IPTables Framework: ';
+if [ $iptfw -eq 1 ]; then
+echo 'nftables';
+else
+echo 'standard';
+fi
+echo;
 echo "Usage:";
 echo "ipban ACTION IP # Perform the requested ACTION on the IP";
 echo "ipban COMMAND   # Perform the requested COMMAND";
@@ -243,9 +251,9 @@ local ipv="$1";
 if [ -z "$ipv" ] || [[ "$ipv" == "" ]] || [ $ipv -eq 0 ]; then local ipv="4"; fi
 if [ $ipv -eq 4 ] || [ $ipv -eq 6 ]; then
 if [ $ipv -eq 6 ]; then
-local iptcmd='ip6tables'; local ipttxt='IP6Tables';
+local iptcmd="ip6tables${iptfwx}"; local ipttxt='IP6Tables';
 else
-local iptcmd='iptables'; local ipttxt='IPTables';
+local iptcmd="iptables${iptfwx}"; local ipttxt='IPTables';
 fi
 local cmd=$( echo "$2" | tr '[:upper:]' '[:lower:]' );
 if [ -n "$cmd" ] && [[ "$cmd" == "all" ]]; then
@@ -256,6 +264,35 @@ echo "All INPUT rules in $ipttxt";
 $iptcmd -L INPUT -n --line-numbers
 fi
 fi
+
+echo; echo 'INPUT Rules:';
+echo -n 'Total: '; iptables -S|grep "\-A INPUT "|wc -l
+echo -n 'Drop: '; iptables -S|grep "\-A INPUT "|grep " DROP"|wc -l
+echo -n 'Reject: '; iptables -S|grep "\-A INPUT "|grep " REJECT"|wc -l
+if ( $f2benable ) && [ -n "$istheref2b" ]; then
+echo; echo -n 'F2B Rules ';
+if ($isf2bon); then
+echo -n '(F2B is present and enabled)';
+else
+echo -n '(F2B is present but disabled)';
+fi
+echo ':';
+echo -n 'Total: '; iptables -S|grep "\-A f2b\-"|wc -l
+echo -n 'Drop: '; iptables -S|grep "\-A f2b\-"|grep " DROP"|wc -l
+echo -n 'Reject: '; iptables -S|grep "\-A f2b\-"|grep " REJECT"|wc -l
+fi
+if ( $ufwenable ) && [ -n "$isthereufw" ]; then
+echo; echo -n 'UFW Rules ';
+if ($isufwenabled); then
+echo -n '(UFW is present and enabled)';
+else
+echo -n '(UFW is present but disabled)';
+fi
+echo ':';
+echo -n 'Total: '; iptables -S|grep "\-A ufw\-"|wc -l
+echo -n 'Drop: '; iptables -S|grep "\-A ufw\-"|grep " DROP"|wc -l
+echo -n 'Reject: '; iptables -S|grep "\-A ufw\-"|grep " REJECT"|wc -l
+fi
 }
 
 iptflush() {
@@ -263,14 +300,14 @@ local ipv="$1";
 if [ -z "$ipv" ] || [[ "$ipv" == "" ]] || [ $ipv -eq 0 ]; then local ipv="4"; fi
 if [ $ipv -eq 4 ] || [ $ipv -eq 6 ]; then
 if [ $ipv -eq 6 ]; then
-local iptcmd='ip6tables'; local ipttxt='IP6Tables';
+local iptcmd="ip6tables${iptfwx}"; local ipttxt='IP6Tables';
 else
-local iptcmd='iptables'; local ipttxt='IPTables';
+local iptcmd="iptables${iptfwx}"; local ipttxt='IPTables';
 fi
-if ( $f2benable ) && [ -n "$istheref2b" ] && [ $f2biptflushstop -gt 0 ]; then
+if ( $f2benable ) && [ -n "$istheref2b" ] && ($isf2bon) && [ $f2biptflushstop -gt 0 ]; then
 f2bstop;
 fi
-if ( $ufwenable ) && [ -n "$isthereufw" ] && [ $ufwiptflushstop -gt 0 ]; then
+if ( $ufwenable ) && [ -n "$isthereufw" ] && ($isufwenabled) && [ $ufwiptflushstop -gt 0 ]; then
 ufwstop;
 fi
 # local iptcmd="echo # iptest ";
@@ -286,10 +323,10 @@ $iptcmd -t raw -X
 $iptcmd -P INPUT ACCEPT
 $iptcmd -P FORWARD ACCEPT
 $iptcmd -P OUTPUT ACCEPT
-if ( $f2benable ) && [ -n "$istheref2b" ] && [ $f2biptflushstart -gt 0 ]; then
+if ( $f2benable ) && [ -n "$istheref2b" ] && ($isf2bon) && [ $f2biptflushstart -gt 0 ]; then
 f2bstart;
 fi
-if ( $ufwenable ) && [ -n "$isthereufw" ] && [ $ufwiptflushstart -gt 0 ]; then
+if ( $ufwenable ) && [ -n "$isthereufw" ] && ($isufwenabled) && [ $ufwiptflushstart -gt 0 ]; then
 if [ $ufwiptflushstart -eq 1 ]; then
 ufwstart "safe";
 else
@@ -552,6 +589,12 @@ if ( ! $ufwenable ); then acheckufw=false; fi
 
 # Main
 
+if [ $iptfw -eq 1 ]; then
+iptfwx='-nft';
+else
+iptfwx='';
+fi
+
 istheref2b=$( type -t fail2ban-client );
 if [ $( fail2ban-client status | wc -l ) -ge 3 ]; then
 isf2bon=true;
@@ -783,9 +826,9 @@ isipblock=0;
 
 # IPTables
 if [ $ipv -eq 6 ]; then
-iptcmd='ip6tables'; ipttxt='IP6Tables';
+iptcmd="ip6tables${iptfwx}"; ipttxt='IP6Tables';
 else
-iptcmd='iptables'; ipttxt='IPTables';
+iptcmd="iptables${iptfwx}"; ipttxt='IPTables';
 fi
 
 echo "IP in $ipttxt:"

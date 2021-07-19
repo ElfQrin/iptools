@@ -1,12 +1,13 @@
 #!/bin/bash
 
 # IPcheck
-xver='r2021-04-15 fr2020-09-12';
+xver='r2021-07-19 fr2020-09-12';
 # by Valerio Capello - http://labs.geody.com/ - License: GPL v3.0
 
 
 # Config
 
+iptfw=1; # IP Tables framework: 0: Standard, 1: nft (nftables, default and recommended since Debian Buster)
 shwuserip=true; # Show User's IP
 shwmachip=true; # Show Machine's IP and Default Gateway
 nreshd=10; # Limit Results for Log Head
@@ -38,6 +39,10 @@ logsoldext='.log.1'; # Extension for old logs
 enipwatchlist=true; # Show occurrences of the IP in the watchlist
 minoccenipwatchlist=1; # Minimum occurrences for an IP in the watchlist to report
 ipwatchlist=(); # IP watchlist. Example: ipwatchlist=('192.0.2.1' '192.0.2.100' '192.0.2.101');
+subnetcheck=true; # Count and List occurrences of IPs in the subnets of the IP into the given log (if this is set to False, no subnets will be checked even if enabled)
+subnetchecken=(); subnetchecken[8]=false; subnetchecken[16]=true; subnetchecken[24]=true; # Count and List occurrences of IPs in the /8 /16 /24 subnets of the IP into the given log
+subnetchecklist=(); subnetchecklist[8]=true; subnetchecklist[16]=true; subnetchecklist[24]=true; # Count and List occurrences of IPs in the /8 /16 /24 subnets of the IP into the given log
+subnetchecklistlim=(); subnetchecklistlim[8]=256; subnetchecklistlim[16]=256; subnetchecklistlim[24]=256; # Set output limit for the list of IPs in the /8 /16 /24 subnets of the IP into the given log
 
 f2benable=true; # Enable Fail2Ban checks (Seek IP in Fail2Ban banned IP lists)
 f2bjaillist=true; # If Fail2Ban is enabled, list Fail2Ban Jails when checking webserver logs
@@ -56,6 +61,13 @@ echo "by Valerio Capello - labs.geody.com - License: GPL v3.0";
 # Requires apphdr
 apphelp() {
 apphdr; echo;
+echo -n 'IPTables Framework: ';
+if [ $iptfw -eq 1 ]; then
+echo 'nftables';
+else
+echo 'standard';
+fi
+echo;
 echo "Usage:";
 echo "ipcheck LOG IP              # Check IP activity within Apache LOG";
 echo "ipcheck LOG                 # Check Apache LOG";
@@ -392,16 +404,16 @@ fi
 f2blist() {
 echo "Fail2Ban:"
 
-local iptcmd='iptables'; local ipttxt='IPTables';
-ipttotrulf2b=$( $iptcmd -L f2b-sshd -n | wc -l ); ipttotrulf2b=$((ipttotrulf2b-2));
+local iptcmd="iptables${iptfwx}"; local ipttxt='IPTables';
+ipttotrulf2b=$( $iptcmd -S | grep "\-A f2b\-" | wc -l ); # ipttotrulf2b=$((ipttotrulf2b-2));
 if [ $ipttotrulf2b -gt 0 ]; then
 echo "$ipttotrulf2b Fail2Ban rules found in $ipttxt.";
 else
 echo "No Fail2Ban rules found in $ipttxt.";
 fi
 
-local iptcmd='ip6tables'; local ipttxt='IP6Tables';
-ipttotrulf2b=$( $iptcmd -L f2b-sshd -n | wc -l ); ipttotrulf2b=$((ipttotrulf2b-2));
+local iptcmd="ip6tables${iptfwx}"; local ipttxt='IP6Tables';
+ipttotrulf2b=$( $iptcmd -S | grep "\-A f2b\-" | wc -l ); # ipttotrulf2b=$((ipttotrulf2b-2));
 if [ $ipttotrulf2b -gt 0 ]; then
 echo "$ipttotrulf2b Fail2Ban rules found in $ipttxt.";
 else
@@ -760,6 +772,12 @@ fi
 
 apphdr; echo;
 
+if [ $iptfw -eq 1 ]; then
+iptfwx='-nft';
+else
+iptfwx='';
+fi
+
 if ( $shwuserip ) || ( $shwmachip ); then
 if ( $shwuserip ); then
 userip;
@@ -783,9 +801,9 @@ ipv=$(isip "$ipx")
 ipinfo $ipx
 
 if [ $ipv -eq 6 ]; then
-iptcmd='ip6tables'; ipttxt='IP6Tables';
+iptcmd="ip6tables${iptfwx}"; ipttxt='IP6Tables';
 else
-iptcmd='iptables'; ipttxt='IPTables';
+iptcmd="iptables${iptfwx}"; ipttxt='IPTables';
 fi
 
 if [ $ipv -eq 5 ]; then
@@ -1048,6 +1066,60 @@ fi
 
 echo "Average accesses per minute: $(( $aclogip/(($timepspanlog)/60) ))";
 
+
+if ( $subnetcheck ) && [ $ipv -eq 4 ]; then
+echo; echo 'Subnets for the IP in Log:';
+ipp=();
+IFS=. ; read ipp[1] ipp[2] ipp[3] ipp[4] <<< "$ipx"; IFS=$' \t\n';
+snma=('24' '16' '8');
+
+for snm in "${snma[@]}"
+do
+if ( ${subnetchecken[$snm]} ); then
+echo -n "Subnet /${snm}";
+case $snm in
+24)
+snpp="${ipp[1]}\.${ipp[2]}\.${ipp[3]}\.";
+echo " (${ipp[1]}.${ipp[2]}.${ipp[3]}.x):";
+;;
+16)
+snpp="${ipp[1]}\.${ipp[2]}\.";
+echo " (${ipp[1]}.${ipp[2]}.x.x):";
+;;
+8)
+snpp="${ipp[1]}\.";
+echo " (${ipp[1]}.x.x.x):";
+;;
+*) echo ':'; echo "Subnet /$snm not supported." ;;
+esac
+
+snpct=$( grep ^${snpp} $logfx | awk '{print $1}' | sort -n | uniq -c | wc -l );
+
+if [ $snpct -eq 1 ]; then
+echo -n "$snpct occurrence found (only the given IP: $ipx )";
+else
+echo -n "$snpct occurrences found";
+fi
+
+if [ $snpct -gt 1 ]; then
+echo ':';
+else
+echo '.';
+fi
+
+if  ( $subnetchecklist ) && [ $snpct -gt 1 ]; then
+if [ ${subnetchecklistlim[$snm]} -gt 0 ] && [ $snpct -gt ${subnetchecklistlim[$snm]} ]; then
+grep ^$snpp $logfx | awk '{print $1}' | sort -n | uniq -c | sort -rn | head --lines=$subnetchecklistlim[$snm] ;
+echo " [ and $(( $snpct - $subnetchecklistlim[$snm] )) more ]";
+else
+grep ^$snpp $logfx | awk '{print $1}' | sort -n | uniq -c | sort -rn ;
+fi
+fi
+
+fi
+done
+fi
+
 echo; echo "Log Head for the IP:";
 grep -i $ipx $logfx | head --lines=$nreshd
 
@@ -1131,7 +1203,7 @@ fi
 
 if [ -n "$logfx" ] && ( [ -z "$ipx" ] || $shwlogstats ); then
 
-iptcmd='iptables'; ipttxt='IPTables';
+iptcmd="iptables${iptfwx}"; ipttxt='IPTables';
 echo "$ipttxt:"
 ipttotrulinp=$( $iptcmd -L INPUT -n | wc -l ); ipttotrulinp=$((ipttotrulinp-2));
 if [ $ipttotrulinp -gt 0 ]; then
@@ -1144,7 +1216,7 @@ else
 echo "No INPUT rules found in $ipttxt.";
 fi
 
-iptcmd='ip6tables'; ipttxt='IP6Tables';
+iptcmd="ip6tables${iptfwx}"; ipttxt='IP6Tables';
 echo "$ipttxt:"
 ipttotrulinp=$( $iptcmd -L INPUT -n | wc -l ); ipttotrulinp=$((ipttotrulinp-2));
 if [ $ipttotrulinp -gt 0 ]; then
