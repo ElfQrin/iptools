@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # IPban
-xver='r2021-07-19 fr2020-09-12';
+xver='r2021-07-21 fr2020-09-12';
 # by Valerio Capello - http://labs.geody.com/ - License: GPL v3.0
 
 
 # Config
 
-iptfw=1; # IP Tables framework: 0: Standard, 1: nft (nftables, default and recommended since Debian Buster)
+iptfw=0; # IP Tables framework: 0: Auto detect, 1: Standard, 2: nft (nftables, default and recommended since Debian 10 "Buster")
 ipundott2dott=true; # If an undotted IP is passed, convert it to a dotted IP before to process it
 allwarns=false; # Issue all warnings and messages, regardless of the requested ban/unban action
 watchmachine=2; # Watch the IPs of the machine and its gateway: 0: No, 1: Warn, 2: Protect (recommended: 2)
@@ -53,11 +53,27 @@ echo "by Valerio Capello - labs.geody.com - License: GPL v3.0";
 apphelp() {
 apphdr; echo;
 echo -n 'IPTables Framework: ';
+
 if [ $iptfw -eq 1 ]; then
-echo 'nftables';
+local iptfwtxt='standard';
+elif [ $iptfw -eq 2 ]; then
+local iptfwtxt='nftables';
 else
-echo 'standard';
+local lindis=$( awk -F'=' '/^NAME=/ {print $2}' /etc/os-release | tr -d '"' | awk '{print $1}' | tr [:upper:] [:lower:] );
+if [ $lindis == "debian" ]; then
+local linverid=$( awk -F'=' '/^VERSION_ID=/ {print $2}' /etc/os-release | tr -d '"' ); local linveridmin=10;
+if [[ "$linverid" == "$linveridmin" ]] || [[ "$(sort --version-sort <<< "$(printf '%s\n' "$linverid" "$linveridmin")" | head --lines=1)" != "$linverid" ]]; then
+local iptfwtxt='nftables (autodetected)';
+else
+local iptfwtxt='standard (autodetected)';
 fi
+else
+local iptfwtxt='standard';
+fi
+fi
+
+echo $iptfwtxt;
+
 echo;
 echo "Usage:";
 echo "ipban ACTION IP # Perform the requested ACTION on the IP";
@@ -590,9 +606,21 @@ if ( ! $ufwenable ); then acheckufw=false; fi
 # Main
 
 if [ $iptfw -eq 1 ]; then
+iptfwx='';
+elif [ $iptfw -eq 2 ]; then
+iptfwx='-nft';
+else
+lindis=$( awk -F'=' '/^NAME=/ {print $2}' /etc/os-release | tr -d '"' | awk '{print $1}' | tr [:upper:] [:lower:] );
+if [ $lindis == "debian" ]; then
+linverid=$( awk -F'=' '/^VERSION_ID=/ {print $2}' /etc/os-release | tr -d '"' );
+if [[ "$linverid" == "10" ]] || [[ "$(sort --version-sort <<< "$(printf '%s\n' "$linverid" "10")" | head --lines=1)" != "$linverid" ]]; then
 iptfwx='-nft';
 else
 iptfwx='';
+fi
+else
+iptfwx='';
+fi
 fi
 
 istheref2b=$( type -t fail2ban-client );
