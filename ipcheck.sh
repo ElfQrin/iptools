@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # IPcheck
-xver='r2021-07-21 fr2020-09-12';
+xver='r2021-07-22 fr2020-09-12';
 # by Valerio Capello - http://labs.geody.com/ - License: GPL v3.0
 
 
@@ -85,9 +85,11 @@ echo $iptfwtxt;
 
 echo;
 echo "Usage:";
-echo "ipcheck LOG IP              # Check IP activity within Apache LOG";
 echo "ipcheck LOG                 # Check Apache LOG";
 echo "ipcheck IP                  # Check IP";
+echo "ipcheck LOG IP              # Check IP activity within Apache LOG";
+echo "ipcheck LOG WEBPAGE         # Check Apache LOG and activities about WEBPAGE";
+echo "ipcheck LOG WEBPAGE IP      # Check IP activity within Apache LOG and WEBPAGE";
 echo "ipcheck --help              # Display this help";
 echo "ipcheck --version           # Display version information";
 echo "ipcheck --httpstatus CODE   # Return HTTP Status for given CODE";
@@ -104,9 +106,11 @@ echo "ipcheck --ufwstatus         # Display UFW status";
 fi
 echo;
 echo "Examples:";
-echo "ipcheck /var/log/apache2/access.log 192.0.2.100";
 echo "ipcheck /var/log/apache2/access.log";
 echo "ipcheck 192.0.2.100";
+echo "ipcheck /var/log/apache2/access.log 192.0.2.100";
+echo "ipcheck /var/log/apache2/access.log example.html";
+echo "ipcheck /var/log/apache2/access.log 192.0.2.100 example.html";
 echo "ipcheck --httpstatus 404";
 }
 
@@ -891,14 +895,28 @@ elif [ $# -eq 1 ]; then
 ipv=$(isip "$1")
 if [ $ipv -eq 4 ] || [ $ipv -eq 5 ] || [ $ipv -eq 6 ]; then
 logf=""; # Apache Log File
+pagx=""; # Target Page
 ipx=$1; # Target IP
 else
 logf=$1; # Apache Log File
+pagx=""; # Target Page
 ipx=""; # Target IP
 fi
 elif [ $# -eq 2 ]; then
+ipv=$(isip "$2")
+if [ $ipv -eq 4 ] || [ $ipv -eq 5 ] || [ $ipv -eq 6 ]; then
 logf=$1; # Apache Log File
+pagx=""; # Target Page
 ipx=$2; # Target IP
+else
+logf=$1; # Apache Log File
+pagx=$2; # Target Page
+ipx=""; # Target IP
+fi
+elif [ $# -eq 3 ]; then
+logf=$1; # Apache Log File
+pagx=$2; # Target Page
+ipx=$3; # Target IP
 else
 apphelp
 exit 1;
@@ -1468,9 +1486,74 @@ echo "There are $cterr malformed fields in the Apache Log File.";
 fi
 fi
 
-echo; echo "Top IPs access count:"
+echo; echo "Top IPs access count:";
 cat $logfx | awk '{print $1}' | sort -n | uniq -c | sort -rn | head --lines=$nrestop # | nl -n rn -s '. '
 
+fi
+
+fi
+
+if [ -n "$pagx" ] && [ -n "$logfx" ] && [[ -f $logfx ]]; then
+
+# Add a leading slash to page name if missing
+if [ ${#pagx} -gt 0 ]; then
+if [[ "${pagx:0:1}" != '/' ]]; then pagx="/${pagx}"; fi
+fi
+
+pagxl="T $pagx";
+
+echo;
+echo "Target Page: $pagx";
+echo;
+
+pagxacctot=$( grep -i "$pagxl" $logfx | wc -l );
+
+echo "Total accesses to the page: $pagxacctot";
+
+if [ $pagxacctot -gt 0 ]; then
+echo;
+if [ -n "$ipx" ]; then
+
+echo "Log Head for the Page accessed from the IP:";
+grep -i "$pagxl" $logfx | grep "$ipx" | head --lines=$nreshd
+echo;
+
+echo "Log Tail for the Page accessed from the IP:";
+grep -i "$pagxl" $logfx | grep "$ipx" | tail --lines=$nrestl
+echo;
+
+echo "Top referrers for the Page accessed from the IP (with query strings):"
+grep -i "$pagxl" $logfx | grep "$ipx" | awk '{print $11}' | sort -n | uniq -c | sort -rn | head --lines=$nrestop
+echo;
+
+echo "Top referrers for the Page accessed from the IP (without query strings):"
+grep -i "$pagxl" $logfx | grep "$ipx" | awk '{print $11}' | sed '/^$/d' | sed 's/\?.*//g' | sort -n | uniq -c | sort -rn | head --lines=$nrestop
+echo;
+
+echo "Access count from the IP to the page:"
+grep -i "$pagxl" $logfx | awk '{print $1}' | grep "$ipx" | wc -l
+
+else
+
+echo "Log Head for the Page:";
+grep -i "$pagxl" $logfx | head --lines=$nreshd
+echo;
+
+echo "Log Tail for the Page:";
+grep -i "$pagxl" $logfx | tail --lines=$nrestl
+echo;
+
+echo "Top referrers for the Page (with query strings):"
+grep -i "$pagxl" $logfx | awk '{print $11}' | sort -n | uniq -c | sort -rn | head --lines=$nrestop
+echo;
+
+echo "Top referrers for the Page (without query strings):"
+grep -i "$pagxl" $logfx | awk '{print $11}' | sed '/^$/d' | sed 's/\?.*//g' | sort -n | uniq -c | sort -rn | head --lines=$nrestop
+echo;
+
+echo "Top IPs accessing the page:"
+grep -i "$pagxl" $logfx | awk '{print $1}' | sort -n | uniq -c | sort -rn | head --lines=$nrestop
+fi
 fi
 
 fi
