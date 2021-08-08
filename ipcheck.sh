@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # IPcheck
-xver='r2021-07-22 fr2020-09-12';
+xver='r2021-08-08 fr2020-09-12';
 # by Valerio Capello - http://labs.geody.com/ - License: GPL v3.0
 
 
@@ -1288,10 +1288,10 @@ else
 echo '.';
 fi
 
-if  ( $subnetchecklist ) && [ $snpct -gt 1 ]; then
+if ( $subnetchecklist ) && [ $snpct -gt 1 ]; then
 if [ ${subnetchecklistlim[$snm]} -gt 0 ] && [ $snpct -gt ${subnetchecklistlim[$snm]} ]; then
-grep ^$snpp $logfx | awk '{print $1}' | sort -n | uniq -c | sort -rn | head --lines=$subnetchecklistlim[$snm] ;
-echo " [ and $(( $snpct - $subnetchecklistlim[$snm] )) more ]";
+grep ^$snpp $logfx | awk '{print $1}' | sort -n | uniq -c | sort -rn | head --lines=${subnetchecklistlim[$snm]} ;
+echo "Top ${subnetchecklistlim[snm]} shown, there are $(( $snpct - ${subnetchecklistlim[snm]} )) more.";
 else
 grep ^$snpp $logfx | awk '{print $1}' | sort -n | uniq -c | sort -rn ;
 fi
