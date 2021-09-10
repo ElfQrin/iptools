@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # IPban
-xver='r2021-07-21 fr2020-09-12';
+xver='r2021-09-10 fr2020-09-12';
 # by Valerio Capello - http://labs.geody.com/ - License: GPL v3.0
 
 
@@ -44,34 +44,31 @@ ufwiptflushstart=1; # Start UFW after flushing IPTables (requires UFW to be pres
 
 # Functions
 
+iptframeworkdetect() {
+if [ $iptfw -eq 1 ]; then
+iptfwx=''; iptfwtxt='standard';
+elif [ $iptfw -eq 2 ]; then
+iptfwx='-nft'; iptfwtxt='nftables';
+else
+local isthereiptnft=$( type -t iptables-nft );
+if [ -n "$isthereiptnft" ]; then
+iptfwx='-nft'; iptfwtxt='nftables (autodetected)';
+else
+iptfwx=''; iptfwtxt='standard (autodetected)';
+fi
+fi
+}
+
 apphdr() {
 echo "IPban";
 echo "by Valerio Capello - labs.geody.com - License: GPL v3.0";
 }
 
-# Requires apphdr
+# Requires apphdr, iptframeworkdetect
 apphelp() {
 apphdr; echo;
 echo -n 'IPTables Framework: ';
-
-if [ $iptfw -eq 1 ]; then
-local iptfwtxt='standard';
-elif [ $iptfw -eq 2 ]; then
-local iptfwtxt='nftables';
-else
-local lindis=$( awk -F'=' '/^NAME=/ {print $2}' /etc/os-release | tr -d '"' | awk '{print $1}' | tr [:upper:] [:lower:] );
-if [ $lindis == "debian" ]; then
-local linverid=$( awk -F'=' '/^VERSION_ID=/ {print $2}' /etc/os-release | tr -d '"' ); local linveridmin=10;
-if [[ "$linverid" == "$linveridmin" ]] || [[ "$(sort --version-sort <<< "$(printf '%s\n' "$linverid" "$linveridmin")" | head --lines=1)" != "$linverid" ]]; then
-local iptfwtxt='nftables (autodetected)';
-else
-local iptfwtxt='standard (autodetected)';
-fi
-else
-local iptfwtxt='standard';
-fi
-fi
-
+iptframeworkdetect;
 echo $iptfwtxt;
 
 echo;
@@ -603,25 +600,10 @@ fi
 if ( ! $f2benable ); then acheckf2b=false; fi
 if ( ! $ufwenable ); then acheckufw=false; fi
 
+
 # Main
 
-if [ $iptfw -eq 1 ]; then
-iptfwx='';
-elif [ $iptfw -eq 2 ]; then
-iptfwx='-nft';
-else
-lindis=$( awk -F'=' '/^NAME=/ {print $2}' /etc/os-release | tr -d '"' | awk '{print $1}' | tr [:upper:] [:lower:] );
-if [ $lindis == "debian" ]; then
-linverid=$( awk -F'=' '/^VERSION_ID=/ {print $2}' /etc/os-release | tr -d '"' );
-if [[ "$linverid" == "10" ]] || [[ "$(sort --version-sort <<< "$(printf '%s\n' "$linverid" "10")" | head --lines=1)" != "$linverid" ]]; then
-iptfwx='-nft';
-else
-iptfwx='';
-fi
-else
-iptfwx='';
-fi
-fi
+iptframeworkdetect;
 
 istheref2b=$( type -t fail2ban-client );
 if [ $( fail2ban-client status | wc -l ) -ge 3 ]; then
