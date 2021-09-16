@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # IPcheck
-xver='r2021-09-10 fr2020-09-12';
+xver='r2021-09-16 fr2020-09-12';
 # by Valerio Capello - http://labs.geody.com/ - License: GPL v3.0
 
 
@@ -1176,10 +1176,12 @@ echo; echo "Current IP activity:"
 ipconnct=$( netstat -anp | grep $ipx | wc -l )
 if [ $ipconnct -gt 0 ]; then
 netstat -anp | grep $ipx | head --lines=$nrestop # | nl -n rn -s '. '
+ipconnest=$( netstat -anp | grep $ipx | grep 'ESTABLISHED' | wc -l )
+if [ $ipconnest -gt 1 ]; then echo "$ipconnest established connections."; else echo "$ipconnest established connection."; fi
 if [ $ipconnct -eq 1 ]; then
-echo "$ipconnct established connection.";
+echo "$ipconnct total connection.";
 else
-echo -n "$ipconnct established connections.";
+echo -n "$ipconnct total connections.";
 if [ $ipconnct -gt $nrestop ]; then echo " (only $nrestop topmost established connections are listed)."; else echo; fi
 fi
 else
