@@ -1,15 +1,21 @@
 #!/bin/bash
 
 # IPcheckmulti - Minimal IPcheck to check multiple IPs from a file or an Apache Log
-xver='r2021-01-16 fr2020-08-20';
+xver='r2021-09-16 fr2020-08-20';
 # by Valerio Capello - http://labs.geody.com/ - License: GPL v3.0
 
 
 # Config
 
 ipfetch=10; # How many most active IPs will be fetched from the Apache Log File if the IP File is not provided
-nreshd=10; # Limit Results for Log Head
+showloghead=true; # Show Log Head
+nreshd=5; # Limit Results for Log Head
+showlogtail=true; # Show Log Tail
 nrestl=$nreshd; # Limit Results for Log Tail
+showtopaccfil=true; # Show top accessed files by the IP
+nrestopaccfil=5; # Limit Results for top accessed files by the IP
+showtopaccfil=true; # Show top accessed files by the IP including query strings
+nrestopaccfilq=$nrestopaccfil; # Limit Results for top accessed files by the IP including query strings
 elsep='----------'; # Separator between each IP's report
 rmtmpfile=true; # Remove tmp file, if one has been created (that is, if the IP File is not provided and it's generated fetching IPs from the Apache Log)
 
@@ -171,11 +177,27 @@ fi
 
 echo "Average accesses per minute: $(( $aclogip/(($timepspanlog)/60) ))";
 
-echo; echo "Log Head for the IP:";
+if ( $showloghead ); then
+echo; echo "Log Head for the IP (Limit: $nreshd ):";
 grep -i $ipx $logfx | head --lines=$nreshd
+fi
 
-echo; echo "Log Tail for the IP:";
+if ( $showlogtail ); then
+echo; echo "Log Tail for the IP (Limit: $nreshd ):";
 grep -i $ipx $logfx | tail --lines=$nrestl
+fi
+
+if ( $showopaccfil ); then
+echo; echo "Top accessed files by the IP (Limit: $nrestopaccfil ):"
+grep -i $ipx $logfx | awk -F\" '{print $2}' | awk '{print $2}' | sed '/^$/d' | sed 's/\?.*//g' | sort | uniq -c | sort -rn | head --lines=$nrestopaccfil # | nl -n rn -s '. '
+fi
+
+if ( $showopaccfilq ); then
+echo; echo "Top accessed files by the IP, including query strings (Limit: $nrestopaccfilq ):"
+grep -i $ipx $logfx | awk -F\" '{print $2}' | awk '{print $2}' | sort | uniq -c | sort -g | tail --lines=$nrestopaccfilq | tac # | nl -n rn -s '. '
+fi
+
+echo;
 
 else
 echo; echo "No matches found in Apache Log File.";
