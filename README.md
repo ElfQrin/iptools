@@ -7,10 +7,11 @@ They all can be fully customized and fine tuned in a very granular way editing t
 The set of tools includes:
 
 IPcheck.
-IPcheck takes as arguments an IP, an Apache Log, or both.
+IPcheck takes as arguments an IP, an Apache Log, or both. You can also pass a web page file name as a third argument together with the Apache Log.
 If you pass an IP it gives you some basic information about it and it reports about the activity of the IP in your system.
 If you pass an Apache log it will tell you what are the most visited pages, which are the IPs with most accesses, which pages and IPs are causing most errors, and so on.
 If you pass both arguments, an Apache Log and an IP, it will report you about the activity of the IP on that log, when it was first and last seen, its time span, what pages it's accessing, what errors is causing, and so on.
+If you pass a web page file name (this is only possible if you also pass an Apache log), it will gather more information about the access to that spacific page.
 It also supports Fail2Ban and UFW, if present in your system.
 
 IPcheckmulti.
