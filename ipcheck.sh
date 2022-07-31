@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # IPcheck
-xver='r2021-09-16 fr2020-09-12';
+xver='r2022-07-31 fr2020-09-12';
 # by Valerio Capello - http://labs.geody.com/ - License: GPL v3.0
 
 
@@ -107,7 +107,7 @@ echo "ipcheck /var/log/apache2/access.log";
 echo "ipcheck 192.0.2.100";
 echo "ipcheck /var/log/apache2/access.log 192.0.2.100";
 echo "ipcheck /var/log/apache2/access.log example.html";
-echo "ipcheck /var/log/apache2/access.log 192.0.2.100 example.html";
+echo "ipcheck /var/log/apache2/access.log example.html 192.0.2.100";
 echo "ipcheck --httpstatus 404";
 }
 
@@ -926,6 +926,12 @@ if [ -n "$logf" ]; then
 case $logf in
 apache | apache2 | "apache 2" | standard)
 logfx="/var/log/apache2/access.log";
+;;
+eq | elfqrin | ElfQrin | Elfqrin | "elf qrin" | "Elf Qrin")
+logfx="/var/log/apache2/elfqrin-com_access.log";
+;;
+geody | Geody)
+logfx="/var/log/apache2/geody-com_access.log";
 ;;
 *)
 logfx=$logf;
