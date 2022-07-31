@@ -927,12 +927,6 @@ case $logf in
 apache | apache2 | "apache 2" | standard)
 logfx="/var/log/apache2/access.log";
 ;;
-eq | elfqrin | ElfQrin | Elfqrin | "elf qrin" | "Elf Qrin")
-logfx="/var/log/apache2/elfqrin-com_access.log";
-;;
-geody | Geody)
-logfx="/var/log/apache2/geody-com_access.log";
-;;
 *)
 logfx=$logf;
 ;;
