@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # IPcheck
-xver='r2022-07-31 fr2020-09-12';
+xver='r2023-08-12 fr2020-09-12';
 # by Valerio Capello - http://labs.geody.com/ - License: GPL v3.0
 
 
@@ -521,7 +521,7 @@ echo; echo "Top IPs accessing the system now:"
 conntot=$( netstat -an | wc -l )
 if [ $conntot -gt 0 ]; then
 connest=$( netstat -an | grep 'ESTABLISHED' | wc -l )
-netstat -an | grep 'ESTABLISHED' | awk '{print $5}' | grep -o "[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}" | egrep -v "(`for i in \`ip addr | grep inet | grep eth0 | cut -d/ -f1 | awk '{print $2}'\`;do echo -n "$i|"| sed 's/\./\\\./g;';done`127\.|0\.0\.0)" | sort -n | uniq -c | sort -rn | head --lines=$nrestop # | nl -n rn -s '. '
+netstat -an | grep 'ESTABLISHED' | awk '{print $5}' | grep -o "[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}" | grep -E -v "(`for i in \`ip addr | grep inet | grep eth0 | cut -d/ -f1 | awk '{print $2}'\`;do echo -n "$i|"| sed 's/\./\\\./g;';done`127\.|0\.0\.0)" | sort -n | uniq -c | sort -rn | head --lines=$nrestop # | nl -n rn -s '. '
 if [ $connest -gt 1 ]; then echo "$connest established connections."; else echo "$connest established connection."; fi
 if [ $conntot -gt 1 ]; then echo "$conntot total connections."; else echo "$conntot total connection."; fi
 else
