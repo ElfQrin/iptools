@@ -15,7 +15,7 @@ If you pass a web page file name (this is only possible if you also pass an Apac
 It also supports Fail2Ban and UFW, if present in your system.
 
 IPcheckmulti.
-IPcheckmulti gives you less information about IPs than IPcheck but it's meant to give you a quick glance of the activity of a set of IPs on a given Apache Log. You can pass as an arguments, besides of the Apache Log, a text file containing the IPs you'd like to check (one per line) or fetch the IPs with most accesses on the given Apache Log.
+IPcheckmulti gives you less information about IPs than IPcheck but it's meant to give you a quick glance of the activity of a set of IPs on a given Apache Log. You can pass as an argument, besides of the Apache Log, a text file containing the IPs you'd like to check (one per line) or fetch the IPs with most accesses on the given Apache Log.
 
 IPban.
 IPban lets you ban and unban IPs on IPTables, all Fail2Ban jails, UFW. It can make sure you are not banning yourself or other vital IPs (like your own machine or its gateway) and you can set your personal whitelist. Also, it makes sure you are not entering the same rule twice before to add it. It also lets you safely flush all IPTables, Fail2Ban, UFW rules.
